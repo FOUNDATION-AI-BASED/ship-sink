@@ -67,6 +67,7 @@
         <h3>Player Connection</h3>
         <div class="rtc-row">
           <button id="hostCreateOfferBtn">Create Offer</button>
++         <button id="hostCreateUnifiedOfferBtn" title="One code usable by players or spectators">Create ONE Unified Offer</button>
           <textarea id="hostOfferOut" placeholder="Offer Code will appear here" readonly></textarea>
         </div>
         <div class="rtc-row">
@@ -105,6 +106,10 @@
 
     <section class="tab-panel" id="tab-join">
       <p class="muted">Join a host using their Offer Code.</p>
+      <div class="controls">
+        <button id="joinAutoPlaceBtn">Auto place my ships</button>
+        <button id="joinStartBtn">Start game</button>
+      </div>
       <div class="rtc">
         <div class="rtc-row">
           <textarea id="joinOfferIn" placeholder="Paste host's Offer Code"></textarea>

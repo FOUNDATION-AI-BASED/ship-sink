@@ -211,6 +211,17 @@
     if(name){ usernameInput.value = name; usernameStatus.textContent = `Hi, ${name}!`; }
   })();
 
+  // Provide default hooks for PvP wiring
+  window.SinkShipsHooks = window.SinkShipsHooks || {
+    onNetworkMessage(source, obj){ console.log('Network message', source, obj); },
+    onConnectedRole(role){
+      // Enable basic UI status on connection
+      if(role==='host'){ el('hostStatus').textContent = 'Connected!'; }
+      if(role==='join'){ el('joinStatus').textContent = 'Connected!'; }
+      if(role==='spectate'){ el('spectateStatus').textContent = 'Connected!'; }
+    }
+  };
+
   // --- AI Mode ---
   const aiMy = makeEmptyState();
   const aiOpp = makeEmptyState();
@@ -383,4 +394,45 @@ aiMyCells.forEach(cell=>{
   });
 });
 
+  // --- Host Mode (basic setup to make UI usable) ---
+  const hostMy = makeEmptyState();
+  const hostOpp = makeEmptyState();
+  const hostMyCells = createBoard('hostMyBoard');
+  const hostOppCells = createBoard('hostOppBoard');
+  document.getElementById('hostAutoPlaceBtn').addEventListener('click', ()=>{
+    placeShipsRandom(hostMy);
+    renderOwnBoard(hostMyCells, hostMy);
+    document.getElementById('hostStatus').textContent = 'Ships auto-placed. Share your Offer Code to connect.';
+  });
+  document.getElementById('hostStartBtn').addEventListener('click', ()=>{
+    document.getElementById('hostStatus').textContent = 'Game start: awaiting opponent shots. (PvP turn logic coming)';
+  });
+
+  // --- Join Mode (basic setup) ---
+  const joinMy = makeEmptyState();
+  const joinOpp = makeEmptyState();
+  const joinMyCells = createBoard('joinMyBoard');
+  const joinOppCells = createBoard('joinOppBoard');
+  // Optional: auto-place when answer created via UI (handled in webrtc hooks later)
+
+  // --- Spectate Boards (visual only) ---
+  const spectateHostCells = createBoard('spectateHostBoard');
+  const spectateOppCells = createBoard('spectateOppBoard');
+
 })();
+
+// ... Join controls to mirror Host basics ---
+const joinAutoBtn = document.getElementById('joinAutoPlaceBtn');
+const joinStartBtn = document.getElementById('joinStartBtn');
+if(joinAutoBtn){
+joinAutoBtn.addEventListener('click', ()=>{
+placeShipsRandom(joinMy);
+renderOwnBoard(joinMyCells, joinMy);
+document.getElementById('joinStatus').textContent = 'Ships auto-placed. Create Answer to connect.';
+});
+}
+if(joinStartBtn){
+joinStartBtn.addEventListener('click', ()=>{
+document.getElementById('joinStatus').textContent = 'Game start: awaiting host shots. (PvP turn logic coming)';
+});
+}

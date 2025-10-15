@@ -17,7 +17,7 @@
   async function hostCreateOffer(){
     hostPC = new RTCPeerConnection(RTC_CONF);
     hostDC = hostPC.createDataChannel('game');
-    hostDC.onopen = ()=> console.log('Host DC open');
+    hostDC.onopen = ()=> { console.log('Host DC open'); window.SinkShipsHooks?.onConnectedRole?.('host'); };
     hostDC.onmessage = onHostMessage;
     hostPC.onicecandidate = e => {
       if(!e.candidate){ // gathering done
@@ -67,19 +67,64 @@
     document.getElementById('spectatorsList').appendChild(li);
   }
 
+  // --- Host: unified offer (one code for player and spectators) ---
+  async function hostCreateUnifiedOffer(){
+    // Player PC/DC
+    hostPC = new RTCPeerConnection(RTC_CONF);
+    hostDC = hostPC.createDataChannel('game');
+    hostDC.onopen = ()=> { console.log('Host DC open'); window.SinkShipsHooks?.onConnectedRole?.('host'); };
+    hostDC.onmessage = onHostMessage;
+    let playerDesc = null; let spectateDesc = null;
+    hostPC.onicecandidate = e => {
+      if(!e.candidate){ playerDesc = hostPC.localDescription; maybeEmit(); }
+    };
+    const offerP = await hostPC.createOffer();
+    await hostPC.setLocalDescription(offerP);
+
+    // Spectator PC/DC
+    const spc = new RTCPeerConnection(RTC_CONF);
+    const sdc = spc.createDataChannel('spectate');
+    hostSpectatePCs.push({pc: spc, dc: sdc});
+    sdc.onopen = ()=> console.log('Spectator DC open');
+    sdc.onmessage = e => console.log('Spectator msg:', e.data);
+    spc.onicecandidate = e => {
+      if(!e.candidate){ spectateDesc = spc.localDescription; maybeEmit(); }
+    };
+    const offerS = await spc.createOffer();
+    await spc.setLocalDescription(offerS);
+
+    function maybeEmit(){
+      if(playerDesc && spectateDesc){
+        const bundle = { player: { sdp: playerDesc.sdp, type: playerDesc.type }, spectate: { sdp: spectateDesc.sdp, type: spectateDesc.type } };
+        document.getElementById('hostOfferOut').value = encode(bundle);
+        document.getElementById('hostStatus').textContent = 'One code created. Share with players or spectators.';
+      }
+    }
+  }
+
+  // --- Wire UI buttons ---
+  document.getElementById('hostCreateOfferBtn').addEventListener('click', hostCreateOffer);
+  document.getElementById('hostAcceptAnswerBtn').addEventListener('click', hostAcceptAnswer);
+  document.getElementById('hostCreateSpectateOfferBtn').addEventListener('click', hostCreateSpectateOffer);
+  document.getElementById('hostSpectateAcceptBtn').addEventListener('click', hostAcceptSpectator);
+  document.getElementById('hostCreateUnifiedOfferBtn').addEventListener('click', hostCreateUnifiedOffer);
+  document.getElementById('joinCreateAnswerBtn').addEventListener('click', joinCreateAnswer);
+  document.getElementById('spectateCreateAnswerBtn').addEventListener('click', spectateCreateAnswer);
+
   // --- Join: player ---
   let joinPC = null; let joinDC = null;
   async function joinCreateAnswer(){
     joinPC = new RTCPeerConnection(RTC_CONF);
     joinPC.ondatachannel = e => {
       joinDC = e.channel;
-      joinDC.onopen = ()=> console.log('Join DC open');
+      joinDC.onopen = ()=> { console.log('Join DC open'); window.SinkShipsHooks?.onConnectedRole?.('join'); };
       joinDC.onmessage = onJoinMessage;
     };
     const input = document.getElementById('joinOfferIn').value.trim();
     const obj = decode(input);
     if(!obj){ alert('Invalid Offer Code'); return; }
-    await joinPC.setRemoteDescription(new RTCSessionDescription(obj));
+    const descObj = obj.player ? obj.player : obj; // support unified code
+    await joinPC.setRemoteDescription(new RTCSessionDescription(descObj));
     const answer = await joinPC.createAnswer();
     await joinPC.setLocalDescription(answer);
     joinPC.onicecandidate = e => {
@@ -97,13 +142,14 @@
     spectatePC = new RTCPeerConnection(RTC_CONF);
     spectatePC.ondatachannel = e => {
       spectateDC = e.channel;
-      spectateDC.onopen = ()=> console.log('Spectate DC open');
+      spectateDC.onopen = ()=> { console.log('Spectate DC open'); window.SinkShipsHooks?.onConnectedRole?.('spectate'); };
       spectateDC.onmessage = onSpectateMessage;
     };
     const input = document.getElementById('spectateOfferIn').value.trim();
     const obj = decode(input);
     if(!obj){ alert('Invalid Spectate Offer Code'); return; }
-    await spectatePC.setRemoteDescription(new RTCSessionDescription(obj));
+    const descObj = obj.spectate ? obj.spectate : obj; // support unified code
+    await spectatePC.setRemoteDescription(new RTCSessionDescription(descObj));
     const answer = await spectatePC.createAnswer();
     await spectatePC.setLocalDescription(answer);
     spectatePC.onicecandidate = e => {
@@ -136,6 +182,18 @@
   };
   window.SinkShipsNet = Net;
 
+  function appendChat(logId, who, text){
+    const ul = document.getElementById(logId);
+    if(!ul) return;
+    const li = document.createElement('li');
+    li.textContent = `${who}: ${text}`;
+    ul.appendChild(li);
+  }
+  function getUsername(){
+    const v = document.getElementById('usernameInput')?.value?.trim();
+    return v || 'Anonymous';
+  }
+
   // --- Wire UI buttons ---
   document.getElementById('hostCreateOfferBtn').addEventListener('click', hostCreateOffer);
   document.getElementById('hostAcceptAnswerBtn').addEventListener('click', hostAcceptAnswer);
@@ -144,12 +202,54 @@
   document.getElementById('joinCreateAnswerBtn').addEventListener('click', joinCreateAnswer);
   document.getElementById('spectateCreateAnswerBtn').addEventListener('click', spectateCreateAnswer);
 
+  // --- Chat wiring ---
+  document.getElementById('hostChatSendBtn').addEventListener('click', ()=>{
+    const input = document.getElementById('hostChatInput');
+    const text = input.value.trim(); if(!text) return;
+    const name = getUsername();
+    appendChat('hostChatLog', name, text);
+    safeSend(hostDC||joinDC, { type:'chat', from:'host', name, text });
+    broadcastSpectators({ type:'chat', from:'host', name, text });
+    input.value = '';
+  });
+  document.getElementById('joinChatSendBtn').addEventListener('click', ()=>{
+    const input = document.getElementById('joinChatInput');
+    const text = input.value.trim(); if(!text) return;
+    const name = getUsername();
+    appendChat('joinChatLog', name, text);
+    safeSend(hostDC||joinDC, { type:'chat', from:'join', name, text });
+    input.value = '';
+  });
+  document.getElementById('spectateChatSendBtn').addEventListener('click', ()=>{
+    const input = document.getElementById('spectateChatInput');
+    const text = input.value.trim(); if(!text) return;
+    const name = getUsername();
+    appendChat('spectateChatLog', name, text);
+    safeSend(spectateDC, { type:'chat', from:'spectate', name, text });
+    input.value = '';
+  });
+
   // Handle game messages to update spectators and peers
   function handleMessage(source, data){
     let obj = null; try{ obj = JSON.parse(data); }catch(e){ return; }
     // Relay to spectators for any peer msg where appropriate
     if(source !== 'spectate') broadcastSpectators(obj);
-    // TODO: Integrate with gameplay (shots, placements, turn changes) via window hooks defined in app.js
-    // Example: window.SinkShipsHooks?.onNetworkMessage?.(obj);
+    // Relay spectator chat to players
+    if(source === 'spectate' && obj?.type === 'chat'){
+      safeSend(hostDC||joinDC, obj);
+      broadcastSpectators(obj);
+    }
+    // Chat display routing
+    if(obj?.type === 'chat'){
+      const who = obj.name || 'Peer';
+      appendChat('hostChatLog', who, obj.text);
+      appendChat('joinChatLog', who, obj.text);
+      appendChat('spectateChatLog', who, obj.text);
+      return;
+    }
+    // Pass gameplay messages to app hooks
+    if(window.SinkShipsHooks && typeof window.SinkShipsHooks.onNetworkMessage === 'function'){
+      window.SinkShipsHooks.onNetworkMessage(source, obj);
+    }
   }
 })();
