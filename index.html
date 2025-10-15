@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sink Ships</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <h1>Sink Ships</h1>
+    <div class="user-row">
+      <label>Temporary Username</label>
+      <input id="usernameInput" placeholder="e.g. Captain42" />
+      <button id="setUsernameBtn">Set</button>
+      <span id="usernameStatus" class="muted"></span>
+      <a href="docs.html" target="_blank" style="margin-left:12px; color: var(--accent); text-decoration: none; font-weight: 700;">Docs</a>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <nav class="mode-tabs">
+      <button class="tab-btn active" data-tab="ai">Play vs AI</button>
+      <button class="tab-btn" data-tab="host">Host Game</button>
+      <button class="tab-btn" data-tab="join">Join Game</button>
+      <button class="tab-btn" data-tab="spectate">Spectate</button>
+    </nav>
+
+    <section class="tab-panel active" id="tab-ai">
+      <div class="controls">
+        <button id="aiAutoPlaceBtn">Auto place my ships</button>
+        <button id="aiStartBtn">Start game</button>
+        <label style="margin-left:8px; display:flex; align-items:center; gap:6px;"><input type="checkbox" id="aiRevealToggle" /> Reveal AI ships</label>
+        <span id="aiStatus" class="status"></span>
+      </div>
+      <div class="boards">
+        <div class="board-wrap">
+          <h3>Your Board</h3>
+          <div id="aiMyBoard" class="board"></div>
+          <div class="controls" style="margin-top:8px;">
+            <button id="aiPlaceToggleBtn">Manual placement</button>
+            <button id="aiRotateBtn">Rotate (Horizontal)</button>
+            <button id="aiClearPlacementBtn">Clear placements</button>
+            <button id="aiLockPlacementBtn">Lock placement</button>
+          </div>
+          <div class="muted" style="margin-top:6px;">Your fleet: <ul id="aiMyShipsList" class="list"></ul></div>
+        </div>
+        <div class="board-wrap">
+          <h3>AI Board</h3>
+          <div id="aiOppBoard" class="board"></div>
+          <div class="muted" style="margin-top:6px;">AI fleet: <ul id="aiOppShipsList" class="list"></ul></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-host">
+      <p class="muted">Host a peer-to-peer game. Share the Offer Code with your opponent (or spectator). Paste their Answer Code to connect. No external servers required.</p>
+      <div class="controls">
+        <button id="hostAutoPlaceBtn">Auto place my ships</button>
+        <button id="hostStartBtn">Start game</button>
+        <span id="hostStatus" class="status"></span>
+      </div>
+      <div class="rtc">
+        <h3>Player Connection</h3>
+        <div class="rtc-row">
+          <button id="hostCreateOfferBtn">Create Offer</button>
+          <textarea id="hostOfferOut" placeholder="Offer Code will appear here" readonly></textarea>
+        </div>
+        <div class="rtc-row">
+          <textarea id="hostAnswerIn" placeholder="Paste opponent's Answer Code here"></textarea>
+          <button id="hostAcceptAnswerBtn">Accept Answer</button>
+        </div>
+      </div>
+      <div class="boards">
+        <div class="board-wrap">
+          <h3>Your Board</h3>
+          <div id="hostMyBoard" class="board"></div>
+        </div>
+        <div class="board-wrap">
+          <h3>Opponent Board</h3>
+          <div id="hostOppBoard" class="board"></div>
+        </div>
+      </div>
+      <div class="controls" style="margin-top:12px;">
+        <input id="hostChatInput" placeholder="Type a message" style="flex:1; padding:8px 10px; border-radius:8px; background:#0b1324; color:var(--text); border:1px solid #334155;" />
+        <button id="hostChatSendBtn">Send</button>
+      </div>
+      <ul id="hostChatLog" class="list"></ul>
+      <div class="rtc spectators">
+        <h3>Spectators (see both boards)</h3>
+        <div class="rtc-row">
+          <button id="hostCreateSpectateOfferBtn">Create Spectate Offer</button>
+          <textarea id="hostSpectateOfferOut" placeholder="Spectate Offer Code" readonly></textarea>
+        </div>
+        <div class="rtc-row">
+          <textarea id="hostSpectateAnswerIn" placeholder="Paste spectator's Answer Code here"></textarea>
+          <button id="hostSpectateAcceptBtn">Accept Spectator Answer</button>
+        </div>
+        <ul id="spectatorsList" class="list"></ul>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-join">
+      <p class="muted">Join a host using their Offer Code.</p>
+      <div class="rtc">
+        <div class="rtc-row">
+          <textarea id="joinOfferIn" placeholder="Paste host's Offer Code"></textarea>
+          <button id="joinCreateAnswerBtn">Create Answer</button>
+        </div>
+        <div class="rtc-row">
+          <textarea id="joinAnswerOut" placeholder="Send this Answer Code back to host" readonly></textarea>
+        </div>
+        <span id="joinStatus" class="status"></span>
+      </div>
+      <div class="boards">
+        <div class="board-wrap">
+          <h3>Your Board</h3>
+          <div id="joinMyBoard" class="board"></div>
+        </div>
+        <div class="board-wrap">
+          <h3>Opponent Board</h3>
+          <div id="joinOppBoard" class="board"></div>
+        </div>
+      </div>
+      <div class="controls" style="margin-top:12px;">
+        <input id="joinChatInput" placeholder="Type a message" style="flex:1; padding:8px 10px; border-radius:8px; background:#0b1324; color:var(--text); border:1px solid #334155;" />
+        <button id="joinChatSendBtn">Send</button>
+      </div>
+      <ul id="joinChatLog" class="list"></ul>
+    </section>
+
+    <section class="tab-panel" id="tab-spectate">
+      <p class="muted">Paste a host's Spectate Offer Code to watch both boards live.</p>
+      <div class="rtc">
+        <div class="rtc-row">
+          <textarea id="spectateOfferIn" placeholder="Paste spectate offer code"></textarea>
+          <button id="spectateCreateAnswerBtn">Create Answer</button>
+        </div>
+        <div class="rtc-row">
+          <textarea id="spectateAnswerOut" placeholder="Send this Answer Code back to host" readonly></textarea>
+        </div>
+        <span id="spectateStatus" class="status"></span>
+      </div>
+      <div class="boards">
+        <div class="board-wrap">
+          <h3>Host Board</h3>
+          <div id="spectateHostBoard" class="board"></div>
+        </div>
+        <div class="board-wrap">
+          <h3>Opponent Board</h3>
+          <div id="spectateOppBoard" class="board"></div>
+        </div>
+      </div>
+      <div class="controls" style="margin-top:12px;">
+        <input id="spectateChatInput" placeholder="Type a message to players" style="flex:1; padding:8px 10px; border-radius:8px; background:#0b1324; color:var(--text); border:1px solid #334155;" />
+        <button id="spectateChatSendBtn">Send</button>
+      </div>
+      <ul id="spectateChatLog" class="list"></ul>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <p class="muted">This game uses peer-to-peer WebRTC data channels with manual copy/paste codes for signaling. Works on GitHub Pages. NAT traversal may require public STUN servers. No accounts or external databases used. CREATED WITH CHATGPT 5 AND QUALITY CHECKED BY GERMANS</p>
+  </footer>
+
+  <script src="webrtc.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

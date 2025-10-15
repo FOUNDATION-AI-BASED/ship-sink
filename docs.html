@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sink Ships – Documentation</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .doc {
+      max-width: 900px; margin: 40px auto; padding: 24px; background: #0b1324; border: 1px solid #334155; border-radius: 12px;
+    }
+    .doc h1 { margin-top: 0; }
+    .k { color: var(--accent); font-weight: 700; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .callout { background: #0e1a33; border-left: 4px solid var(--accent); padding: 12px 16px; border-radius: 8px; }
+    .section { margin: 24px 0; }
+    ul { margin-left: 20px; }
+    a { color: var(--accent); text-decoration: none; }
+  </style>
+</head>
+<body>
+  <main class="doc">
+    <h1>Sink Ships – How It Works</h1>
+    <p>This page explains the game systems, AI mode, peer-to-peer play, and spectating. It also outlines current limitations and planned improvements.</p>
+
+    <div class="section">
+      <h2>Boards & Ships</h2>
+      <ul>
+        <li>Two 10×10 grids: your board and your opponent's.</li>
+        <li>Fleet types: Carrier (5), Battleship (4), Cruiser (3), Submarine (3), Destroyer (2).</li>
+        <li>Placement rules: no overlap and no touching (including diagonals). Ships can be placed horizontally or vertically.</li>
+        <li>Hits and misses are tracked per cell; a ship is sunk when all its cells are hit.</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h2>Single-Player AI Mode</h2>
+      <ul>
+        <li>The AI places ships randomly following the no-touch rule.</li>
+        <li>You can toggle <span class="k">Reveal AI ships</span> for debugging in the AI tab.</li>
+        <li>Manual placement: enable Manual placement, rotate with the Rotate button, clear placements, and Lock placement to preserve your setup across restarts.</li>
+        <li>AI turn logic: AI fires at your board after your shot resolves; win/loss messages appear when a fleet is sunk.</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h2>Peer-to-Peer (PvP) with Copy/Paste Signaling</h2>
+      <p>We use WebRTC data channels for direct communication without servers. Signaling is done manually by copy/paste:</p>
+      <ul>
+        <li><strong>Host</strong>: Create offer, copy the code, send it to your opponent. Paste their answer to connect.</li>
+        <li><strong>Join</strong>: Paste the host's offer, create an answer, copy the code, and send it back.</li>
+        <li>Once connected, messages are relayed over a reliable data channel. Spectators connect to a separate <span class="mono">spectate</span> channel.</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h2>Spectating</h2>
+      <ul>
+        <li>Host can create a spectate offer; each spectator provides an answer.</li>
+        <li>Spectators receive broadcast updates from both players.</li>
+        <li>UI shows both boards for viewers; messages can be relayed to spectators.</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h2>Temporary Chat</h2>
+      <p>We provide text inputs and Send buttons on Host, Join, and Spectate views. For test purposes, the Send buttons are currently non-functional (no network calls or UI updates). This allows UI layout validation without backend logic.</p>
+    </div>
+
+    <div class="section">
+      <h2>Limitations & GitHub Pages Notes</h2>
+      <ul>
+        <li>No centralized matchmaking or TURN server; copy/paste signaling required.</li>
+        <li>GitHub Pages can host static assets but cannot run a signaling service; use manual exchange or GitHub Actions to publish builds.</li>
+        <li>NATs without public STUN reachability may fail to connect.</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h2>Roadmap</h2>
+      <ul>
+        <li>Functional chat with message relay for players and spectators.</li>
+        <li>Spectator view enhancements and replay mode.</li>
+        <li>SVG ship visuals, animations, and accessibility improvements.</li>
+      </ul>
+    </div>
+
+    <p class="callout">Tip: open this Docs page from the header link in the app.</p>
+  </main>
+</body>
+</html>
