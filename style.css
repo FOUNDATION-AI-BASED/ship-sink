@@ -52,6 +52,8 @@ body {
 .board { width: 100%; max-width: 420px; aspect-ratio: 1; display: grid; grid-template-columns: repeat(10, 1fr); border: 1px solid #334155; border-radius: 12px; overflow: hidden; }
 .board.disabled { pointer-events: none; opacity: 0.7; filter: grayscale(0.4); }
 .cell { border: 1px solid #1f2937; position: relative; background: #0b1324; }
+/* Fallback sizing for environments that don't support aspect-ratio: make cells square so the grid has height */
+.cell::before { content: ""; display: block; padding-top: 100%; }
 .cell:hover { outline: 1px solid var(--accent); cursor: pointer; }
 .cell.ship { background: var(--ship); box-shadow: inset 0 0 0 2px rgba(0,0,0,0.35); }
 .cell.hit { background: var(--hit); }

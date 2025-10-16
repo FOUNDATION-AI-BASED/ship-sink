@@ -67,7 +67,8 @@
         <h3>Player Connection</h3>
         <div class="rtc-row">
           <button id="hostCreateOfferBtn">Create Offer</button>
-+         <button id="hostCreateUnifiedOfferBtn" title="One code usable by players or spectators">Create ONE Unified Offer</button>
+          -          <button id="hostCreateUnifiedOfferBtn" title="One code usable by players or spectators">Create ONE Unified Offer</button>
+          +          <!-- Unified Offer button removed -->
           <textarea id="hostOfferOut" placeholder="Offer Code will appear here" readonly></textarea>
         </div>
         <div class="rtc-row">
@@ -79,10 +80,18 @@
         <div class="board-wrap">
           <h3>Your Board</h3>
           <div id="hostMyBoard" class="board"></div>
+          +          <div class="muted" style="margin-top:6px;">Your fleet: <ul id="hostMyShipsList" class="list"></ul></div>
+          <div class="controls" style="margin-top:8px;">
+            <button id="hostPlaceToggleBtn">Manual placement</button>
+            <button id="hostRotateBtn">Rotate (Horizontal)</button>
+            <button id="hostClearPlacementBtn">Clear placements</button>
+            <button id="hostLockPlacementBtn">Lock placement</button>
+          </div>
         </div>
         <div class="board-wrap">
           <h3>Opponent Board</h3>
           <div id="hostOppBoard" class="board"></div>
+          +          <div class="muted" style="margin-top:6px;">Opponent: <ul id="hostOppShipsList" class="list"></ul></div>
         </div>
       </div>
       <div class="controls" style="margin-top:12px;">
@@ -124,10 +133,18 @@
         <div class="board-wrap">
           <h3>Your Board</h3>
           <div id="joinMyBoard" class="board"></div>
+          +          <div class="muted" style="margin-top:6px;">Your fleet: <ul id="joinMyShipsList" class="list"></ul></div>
+          <div class="controls" style="margin-top:8px;">
+            <button id="joinPlaceToggleBtn">Manual placement</button>
+            <button id="joinRotateBtn">Rotate (Horizontal)</button>
+            <button id="joinClearPlacementBtn">Clear placements</button>
+            <button id="joinLockPlacementBtn">Lock placement</button>
+          </div>
         </div>
         <div class="board-wrap">
           <h3>Opponent Board</h3>
           <div id="joinOppBoard" class="board"></div>
+          +          <div class="muted" style="margin-top:6px;">Opponent: <ul id="joinOppShipsList" class="list"></ul></div>
         </div>
       </div>
       <div class="controls" style="margin-top:12px;">

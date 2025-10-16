@@ -3,7 +3,7 @@
   const RTC_CONF = {
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:global.stun.twilio.com:3478?transport=udp' }
+      { urls: 'stun:global.stun.twilio.com:3478' }
     ]
   };
 
@@ -13,6 +13,15 @@
   // --- Host: player channel ---
   let hostPC = null; let hostDC = null;
   let hostSpectatePCs = []; // list of RTCPeerConnections for spectators
+
+  function waitForIceGatheringComplete(pc){
+    if(pc.iceGatheringState === 'complete') return Promise.resolve();
+    return new Promise(resolve => {
+      const check = ()=>{ if(pc.iceGatheringState === 'complete'){ pc.removeEventListener('icegatheringstatechange', check); resolve(); } };
+      pc.addEventListener('icegatheringstatechange', check);
+      setTimeout(()=>{ pc.removeEventListener('icegatheringstatechange', check); resolve(); }, 2000);
+    });
+  }
 
   async function hostCreateOffer(){
     hostPC = new RTCPeerConnection(RTC_CONF);
@@ -27,6 +36,9 @@
     };
     const offer = await hostPC.createOffer();
     await hostPC.setLocalDescription(offer);
+    await waitForIceGatheringComplete(hostPC);
+    const finalOffer = hostPC.localDescription;
+    document.getElementById('hostOfferOut').value = encode({sdp: finalOffer.sdp, type: finalOffer.type});
   }
 
   async function hostAcceptAnswer(){
@@ -52,6 +64,9 @@
     };
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
+    await waitForIceGatheringComplete(pc);
+    const finalOffer = pc.localDescription;
+    document.getElementById('hostSpectateOfferOut').value = encode({sdp: finalOffer.sdp, type: finalOffer.type});
     hostSpectatePCs.push({pc, dc});
   }
 
@@ -74,32 +89,23 @@
     hostDC = hostPC.createDataChannel('game');
     hostDC.onopen = ()=> { console.log('Host DC open'); window.SinkShipsHooks?.onConnectedRole?.('host'); };
     hostDC.onmessage = onHostMessage;
-    let playerDesc = null; let spectateDesc = null;
-    hostPC.onicecandidate = e => {
-      if(!e.candidate){ playerDesc = hostPC.localDescription; maybeEmit(); }
-    };
     const offerP = await hostPC.createOffer();
     await hostPC.setLocalDescription(offerP);
-
+  
     // Spectator PC/DC
     const spc = new RTCPeerConnection(RTC_CONF);
     const sdc = spc.createDataChannel('spectate');
-    hostSpectatePCs.push({pc: spc, dc: sdc});
     sdc.onopen = ()=> console.log('Spectator DC open');
-    sdc.onmessage = e => console.log('Spectator msg:', e.data);
-    spc.onicecandidate = e => {
-      if(!e.candidate){ spectateDesc = spc.localDescription; maybeEmit(); }
-    };
+    sdc.onmessage = onSpectateMessage;
     const offerS = await spc.createOffer();
     await spc.setLocalDescription(offerS);
-
-    function maybeEmit(){
-      if(playerDesc && spectateDesc){
-        const bundle = { player: { sdp: playerDesc.sdp, type: playerDesc.type }, spectate: { sdp: spectateDesc.sdp, type: spectateDesc.type } };
-        document.getElementById('hostOfferOut').value = encode(bundle);
-        document.getElementById('hostStatus').textContent = 'One code created. Share with players or spectators.';
-      }
-    }
+  
+    await Promise.all([waitForIceGatheringComplete(hostPC), waitForIceGatheringComplete(spc)]);
+    const playerDescLocal = hostPC.localDescription;
+    const spectateDescLocal = spc.localDescription;
+    document.getElementById('hostOfferOut').value = encode({ player: { sdp: playerDescLocal.sdp, type: playerDescLocal.type }, spectate: { sdp: spectateDescLocal.sdp, type: spectateDescLocal.type } });
+    document.getElementById('hostStatus').textContent = 'One code created. Share with players or spectators.';
+    hostSpectatePCs.push({pc: spc, dc: sdc});
   }
 
   // --- Wire UI buttons ---
@@ -107,7 +113,6 @@
   document.getElementById('hostAcceptAnswerBtn').addEventListener('click', hostAcceptAnswer);
   document.getElementById('hostCreateSpectateOfferBtn').addEventListener('click', hostCreateSpectateOffer);
   document.getElementById('hostSpectateAcceptBtn').addEventListener('click', hostAcceptSpectator);
-  document.getElementById('hostCreateUnifiedOfferBtn').addEventListener('click', hostCreateUnifiedOffer);
   document.getElementById('joinCreateAnswerBtn').addEventListener('click', joinCreateAnswer);
   document.getElementById('spectateCreateAnswerBtn').addEventListener('click', spectateCreateAnswer);
 
@@ -127,13 +132,10 @@
     await joinPC.setRemoteDescription(new RTCSessionDescription(descObj));
     const answer = await joinPC.createAnswer();
     await joinPC.setLocalDescription(answer);
-    joinPC.onicecandidate = e => {
-      if(!e.candidate){
-        const desc = joinPC.localDescription;
-        document.getElementById('joinAnswerOut').value = encode({sdp: desc.sdp, type: desc.type});
-        document.getElementById('joinStatus').textContent = 'Answer created. Send to host.';
-      }
-    };
+    await waitForIceGatheringComplete(joinPC);
+    const finalAnswer = joinPC.localDescription;
+    document.getElementById('joinAnswerOut').value = encode({sdp: finalAnswer.sdp, type: finalAnswer.type});
+    document.getElementById('joinStatus').textContent = 'Answer created. Send to host.';
   }
 
   // --- Spectate: viewer ---
@@ -152,13 +154,10 @@
     await spectatePC.setRemoteDescription(new RTCSessionDescription(descObj));
     const answer = await spectatePC.createAnswer();
     await spectatePC.setLocalDescription(answer);
-    spectatePC.onicecandidate = e => {
-      if(!e.candidate){
-        const desc = spectatePC.localDescription;
-        document.getElementById('spectateAnswerOut').value = encode({sdp: desc.sdp, type: desc.type});
-        document.getElementById('spectateStatus').textContent = 'Spectate answer created. Send to host.';
-      }
-    };
+    await waitForIceGatheringComplete(spectatePC);
+    const finalAnswer = spectatePC.localDescription;
+    document.getElementById('spectateAnswerOut').value = encode({sdp: finalAnswer.sdp, type: finalAnswer.type});
+    document.getElementById('spectateStatus').textContent = 'Spectate answer created. Send to host.';
   }
 
   // --- Messaging protocol ---
@@ -166,8 +165,8 @@
     if(!dc || dc.readyState !== 'open') return;
     dc.send(JSON.stringify(obj));
   }
-  function onHostMessage(ev){ handleMessage('host', ev.data); }
-  function onJoinMessage(ev){ handleMessage('join', ev.data); }
+  function onHostMessage(ev){ handleMessage('join', ev.data); }
+  function onJoinMessage(ev){ handleMessage('host', ev.data); }
   function onSpectateMessage(ev){ handleMessage('spectate', ev.data); }
 
   function broadcastSpectators(msg){
@@ -176,8 +175,15 @@
 
   // You should integrate with game state from app.js via window.SinkShipsNet
   const Net = {
-    sendToOpponent(msg){ safeSend(hostDC||joinDC, msg); },
+    sendToOpponent(msg){
+      // Send to peer
+      safeSend(hostDC||joinDC, msg);
+      // Also broadcast to any connected spectators (effective on host side)
+      broadcastSpectators(msg);
+    },
     broadcastToSpectators(msg){ broadcastSpectators(msg); },
+    // Alias for compatibility with app.js
+    sendToSpectators(msg){ broadcastSpectators(msg); },
     setStatus(where, text){ document.getElementById(where).textContent = text; }
   };
   window.SinkShipsNet = Net;
